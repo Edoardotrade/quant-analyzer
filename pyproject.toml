@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantanalyzer"
+version = "0.1.0"
+description = "Motore di analisi quantitativa dei mercati (dati, indicatori, risk management, report). Fase 1: struttura e fetch dati."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Mektech" }]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "yfinance>=0.2.40",
+    "ccxt>=4.2",
+    "httpx>=0.27",
+    "fpdf2>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+ui = [
+    "streamlit>=1.30",
+]
+
+[project.scripts]
+# entrypoint di comodo per lanciare l'API: `quantanalyzer-api`
+quantanalyzer-api = "quantanalyzer.api.app:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008: Query()/Depends() nei default degli argomenti è il pattern idiomatico
+# di FastAPI (non un bug), quindi lo escludiamo.
+ignore = ["B008"]

@@ -1,0 +1,42 @@
+name: Quant Monitor (avvisi Telegram)
+
+on:
+  schedule:
+    # ogni 15 minuti (orari UTC; GitHub può ritardare di qualche minuto sotto carico)
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}   # permette l'avvio manuale dalla scheda "Actions"
+
+# evita che due esecuzioni si accavallino
+concurrency:
+  group: quant-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Ripristina lo stato degli avvisi (evita doppioni)
+        uses: actions/cache@v4
+        with:
+          path: .cache/monitor_state.json
+          key: monitor-state-${{ github.run_id }}
+          restore-keys: |
+            monitor-state-
+
+      - name: Installa il pacchetto
+        run: pip install -e .
+
+      - name: Controlla i mercati e invia gli avvisi
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python check_once.py

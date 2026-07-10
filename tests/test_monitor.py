@@ -1,0 +1,94 @@
+"""Test della logica di sorveglianza/avvisi (dedup, formattazione)."""
+
+from __future__ import annotations
+
+from quantanalyzer.alerts import monitor as mon
+from quantanalyzer.alerts.monitor import evaluate_alerts, format_alert, run_once
+from quantanalyzer.models import (
+    AssetClass,
+    OperatingSignal,
+    PositionSide,
+    RiskParams,
+    SignalAction,
+)
+
+
+def _enter(symbol="XAUUSD"):
+    return OperatingSignal(
+        symbol=symbol,
+        asset_class=AssetClass.FOREX,
+        action=SignalAction.ENTER,
+        side=PositionSide.LONG,
+        ready=True,
+        entry=4100.0,
+        stop_loss=4050.0,
+        take_profit=4200.0,
+        rr=2.0,
+        size_units=0.02,
+        headline="🟢 COMPRA",
+        reason="ok",
+    )
+
+
+def _wait(symbol="XAUUSD"):
+    return OperatingSignal(
+        symbol=symbol,
+        asset_class=AssetClass.FOREX,
+        action=SignalAction.WAIT,
+        side=PositionSide.LONG,
+        ready=False,
+        headline="⏳ ASPETTA",
+        reason="rr basso",
+    )
+
+
+def test_format_alert_contains_levels():
+    msg = format_alert(_enter())
+    assert "COMPRA" in msg
+    assert "Stop Loss" in msg and "4050.0" in msg
+    assert "Take Profit" in msg and "4200.0" in msg
+
+
+def test_alert_fires_once_then_dedupes():
+    state: dict[str, bool] = {}
+    sent: list[str] = []
+    notifier = lambda text: sent.append(text) or True  # noqa: E731
+
+    # primo giro: ENTRA -> invia
+    fired1 = evaluate_alerts([_enter()], state, notifier)
+    assert fired1 == ["XAUUSD"]
+    assert len(sent) == 1
+
+    # secondo giro: ancora ENTRA -> NON reinvia
+    fired2 = evaluate_alerts([_enter()], state, notifier)
+    assert fired2 == []
+    assert len(sent) == 1
+
+
+def test_alert_refires_after_returning_to_wait():
+    state: dict[str, bool] = {}
+    sent: list[str] = []
+    notifier = lambda text: sent.append(text) or True  # noqa: E731
+
+    evaluate_alerts([_enter()], state, notifier)  # invia (1)
+    evaluate_alerts([_wait()], state, notifier)  # torna in attesa
+    fired = evaluate_alerts([_enter()], state, notifier)  # nuovo ENTRA -> invia (2)
+    assert fired == ["XAUUSD"]
+    assert len(sent) == 2
+
+
+def test_run_once_persists_state_on_file(tmp_path, monkeypatch):
+    sent: list[str] = []
+    notifier = lambda text: sent.append(text) or True  # noqa: E731
+    monkeypatch.setattr(mon, "check_watchlist", lambda items, params, **kw: [_enter()])
+    state_file = tmp_path / "state.json"
+    params = RiskParams(capital=10_000)
+
+    _, fired1 = run_once([], params, state_path=state_file, notifier=notifier)
+    assert fired1 == ["XAUUSD"]
+    assert state_file.exists()
+
+    # secondo giro (stato riletto dal file): niente doppione
+    _, fired2 = run_once([], params, state_path=state_file, notifier=notifier)
+    assert fired2 == []
+    assert len(sent) == 1

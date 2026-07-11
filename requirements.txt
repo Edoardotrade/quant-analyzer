@@ -1,0 +1,4 @@
+# Per il deploy della dashboard su Streamlit Community Cloud.
+# Installa il pacchetto (con le sue dipendenze) e Streamlit.
+.
+streamlit>=1.30

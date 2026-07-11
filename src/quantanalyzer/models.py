@@ -382,6 +382,8 @@ class OperatingSignal(BaseModel):
     headline: str
     reason: str
     as_of: datetime | None = None
+    market_open: bool = True
+    market_note: str = ""
 
 
 # --------------------------------------------------------------------------- #

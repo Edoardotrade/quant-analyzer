@@ -53,6 +53,9 @@ def check_watchlist(
 def format_alert(sig: OperatingSignal) -> str:
     """Testo dell'avviso Telegram per un segnale di ingresso."""
     verbo = "COMPRA" if sig.side.value == "long" else "VENDI"
+    chiuso = ""
+    if not sig.market_open:
+        chiuso = f"🔒 {sig.market_note} — verifica all'apertura (possibile gap)\n"
     return (
         f"🟢 <b>SEGNALE — {sig.symbol}</b>\n"
         f"Operazione: <b>{verbo}</b>\n"
@@ -61,6 +64,7 @@ def format_alert(sig: OperatingSignal) -> str:
         f"🎯 Take Profit: {sig.take_profit}\n"
         f"Quantità: {sig.size_units}\n"
         f"Rischio/Rendimento: {sig.rr}\n"
+        f"{chiuso}"
         f"—\n<i>{DISCLAIMER_SHORT}</i>"
     )
 

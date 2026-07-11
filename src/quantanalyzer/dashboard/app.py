@@ -172,6 +172,7 @@ for symbol, asset_class in items:
                 f"Prezzo ora: {sig.price} · aggiornato al {series.end:%Y-%m-%d} · "
                 f"fonte {series.source}"
             )
+        st.caption("🟢 mercato aperto" if sig.market_open else f"🔒 {sig.market_note}")
         with st.expander("Vedi grafico e scarica il report (dettagli)"):
             _detail(series, params)
 

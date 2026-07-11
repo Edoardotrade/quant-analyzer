@@ -15,6 +15,7 @@ from ..models import (
 )
 from ..risk.planner import build_risk_plan
 from .entry import build_entry_playbook
+from .market_hours import market_status
 from .technical import analyze_technical
 
 
@@ -30,11 +31,14 @@ def _asset_label(symbol: str) -> str:
 def build_operating_signal(series: PriceSeries, risk_params: RiskParams) -> OperatingSignal:
     """Costruisce il segnale operativo per un asset."""
     ta = analyze_technical(series)
+    is_open, market_note = market_status(series.asset_class)
     base = {
         "symbol": series.symbol,
         "asset_class": series.asset_class,
         "price": series.last_close,
         "as_of": series.end,
+        "market_open": is_open,
+        "market_note": market_note,
     }
 
     if not ta.computed:

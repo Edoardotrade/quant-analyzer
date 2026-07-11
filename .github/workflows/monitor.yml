@@ -1,6 +1,8 @@
 name: Quant Monitor (avvisi Telegram)
 
 on:
+  push:
+    branches: [main]        # ogni push su main avvia subito un controllo
   schedule:
     # ogni 15 minuti (orari UTC; GitHub può ritardare di qualche minuto sotto carico)
     - cron: "*/15 * * * *"
@@ -38,6 +40,6 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # avvio manuale (Run workflow) => manda un messaggio di conferma su Telegram
-          MONITOR_HEARTBEAT: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
+          # ogni avvio NON programmato (push/manuale) manda una conferma su Telegram
+          MONITOR_HEARTBEAT: ${{ github.event_name != 'schedule' && '1' || '' }}
         run: python check_once.py

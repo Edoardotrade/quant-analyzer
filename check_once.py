@@ -6,12 +6,24 @@ lo stato in .cache/monitor_state.json (persistito dallo scheduler) evita i doppi
 """
 
 import os
+import sys
 
 from quantanalyzer.alerts.monitor import run_once
 from quantanalyzer.alerts.telegram import send_telegram_message
+from quantanalyzer.config import get_settings
 from quantanalyzer.watchlist import DEFAULT_PARAMS, DEFAULT_WATCHLIST
 
 if __name__ == "__main__":
+    # Controllo esplicito: se mancano le chiavi Telegram, errore chiaro (niente traceback).
+    if not get_settings().telegram_ready:
+        print(
+            "ERRORE: Telegram non configurato. Verifica che nel repository esistano i due "
+            "REPOSITORY secrets con nomi ESATTI: TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID "
+            "(Settings > Secrets and variables > Actions > scheda 'Repository secrets').",
+            flush=True,
+        )
+        sys.exit(1)
+
     # Heartbeat: solo all'avvio manuale (workflow_dispatch) manda una conferma su Telegram.
     if os.environ.get("MONITOR_HEARTBEAT"):
         try:

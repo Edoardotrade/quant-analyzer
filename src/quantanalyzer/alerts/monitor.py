@@ -79,9 +79,17 @@ def evaluate_alerts(
         is_enter = sig.action == SignalAction.ENTER
         was_enter = state.get(sig.symbol, False)
         if is_enter and not was_enter:
-            notifier(format_alert(sig))
-            fired.append(sig.symbol)
-        state[sig.symbol] = is_enter
+            try:
+                sent_ok = bool(notifier(format_alert(sig)))
+            except Exception as exc:  # noqa: BLE001 — un invio fallito non ferma gli altri
+                print(f"[monitor] invio avviso fallito per {sig.symbol}: {exc}", flush=True)
+                sent_ok = False
+            if sent_ok:
+                fired.append(sig.symbol)
+                state[sig.symbol] = True
+            # se l'invio non riesce, NON marchiamo lo stato: si ritenta al giro dopo
+        else:
+            state[sig.symbol] = is_enter
     return fired
 
 

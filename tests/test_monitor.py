@@ -77,6 +77,24 @@ def test_alert_refires_after_returning_to_wait():
     assert len(sent) == 2
 
 
+def test_failed_send_is_not_marked_and_retries():
+    state: dict[str, bool] = {}
+
+    def failing(_text):
+        raise RuntimeError("boom")
+
+    # invio fallito -> nessun fired, stato NON marcato come inviato
+    fired = evaluate_alerts([_enter()], state, failing)
+    assert fired == []
+    assert state.get("XAUUSD", False) is False
+
+    # giro successivo con invio ok -> parte davvero
+    sent: list[str] = []
+    fired2 = evaluate_alerts([_enter()], state, lambda t: sent.append(t) or True)
+    assert fired2 == ["XAUUSD"]
+    assert len(sent) == 1
+
+
 def test_run_once_persists_state_on_file(tmp_path, monkeypatch):
     sent: list[str] = []
     notifier = lambda text: sent.append(text) or True  # noqa: E731

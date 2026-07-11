@@ -8,6 +8,7 @@ cancello è chiuso, il verdetto è 'attendere', con i trigger espliciti da aspet
 from __future__ import annotations
 
 from ..models import (
+    Direction,
     EntryGate,
     EntryPlaybook,
     PositionSide,
@@ -97,6 +98,27 @@ def build_entry_playbook(
         d4 += " Nota: la size richiederebbe leva (controvalore > capitale)."
     gates.append(EntryGate(name="Rischio dimensionabile", passed=g4, detail=d4))
 
+    # Cancello 5 — forza del trend (ADX): niente ingressi in mercato laterale
+    adx_sig = next((s for s in ta.signals if s.name.startswith("Forza del trend")), None)
+    adx_val = adx_sig.value if adx_sig else None
+    if adx_val is None:
+        g5, d5 = True, "Forza del trend (ADX) non disponibile: nessun veto."
+    elif adx_val >= 20:
+        g5, d5 = True, f"ADX {adx_val:.0f}: trend con forza sufficiente."
+    else:
+        g5, d5 = False, f"ADX {adx_val:.0f} (<20): mercato laterale, ingresso poco affidabile."
+    gates.append(EntryGate(name="Forza del trend (ADX)", passed=g5, detail=d5))
+
+    # Cancello 6 — allineamento col timeframe superiore (settimanale)
+    weekly = ta.weekly_trend
+    if weekly is None or weekly == Direction.NEUTRAL:
+        g6, d6 = True, "Trend settimanale neutro/non disponibile: nessun veto."
+    elif (long and weekly == Direction.BULLISH) or ((not long) and weekly == Direction.BEARISH):
+        g6, d6 = True, f"In linea col trend settimanale ({weekly.value})."
+    else:
+        g6, d6 = False, f"Contro il trend settimanale ({weekly.value}): controtendenza, rischioso."
+    gates.append(EntryGate(name="Allineato alla settimanale", passed=g6, detail=d6))
+
     ready = all(g.passed for g in gates)
 
     triggers: list[str] = []
@@ -143,6 +165,12 @@ def build_entry_playbook(
         )
         if not g2:
             triggers.append(f"Attendi il rientro dell'RSI sopra {rsi_oversold:.0f}.")
+
+    if not ready and g1:
+        if not g5:
+            triggers.append("Attendi che il trend prenda forza (ADX ≥ 20).")
+        if not g6:
+            triggers.append(f"Attendi l'allineamento col trend settimanale ({weekly.value}).")
 
     if long:
         ref = f"{nearest_sup:.4f}" if nearest_sup is not None else str(plan.stop)

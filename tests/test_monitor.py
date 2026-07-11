@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from quantanalyzer.alerts import monitor as mon
-from quantanalyzer.alerts.monitor import evaluate_alerts, format_alert, run_once
+from quantanalyzer.alerts.monitor import build_digest, evaluate_alerts, format_alert, run_once
 from quantanalyzer.models import (
     AssetClass,
     OperatingSignal,
@@ -40,6 +40,14 @@ def _wait(symbol="XAUUSD"):
         headline="⏳ ASPETTA",
         reason="rr basso",
     )
+
+
+def test_build_digest_lists_markets():
+    msg = build_digest([_enter("XAUUSD"), _wait("EURUSD")])
+    assert "Riepilogo" in msg
+    assert "XAUUSD" in msg
+    assert "EURUSD" in msg
+    assert "COMPRA" in msg  # per il mercato in ENTRA
 
 
 def test_format_alert_contains_levels():

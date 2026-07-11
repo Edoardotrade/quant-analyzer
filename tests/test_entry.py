@@ -44,6 +44,33 @@ def test_all_gates_pass_is_ready():
     assert "presente" in pb.verdict.lower()
 
 
+def test_weak_adx_blocks_entry():
+    series = build_linear_series(n=260, step=1.0)
+    ta = build_ta(
+        Direction.BULLISH, price=360.0, supports=[355.0], resistances=[375.0], adx=15.0
+    )
+    plan = build_risk_plan(series, PARAMS, technical=ta)
+    pb = build_entry_playbook(ta, plan, min_rr=2.0)
+    assert pb.ready is False
+    assert _gate(pb, "Forza del trend").passed is False
+
+
+def test_counter_weekly_trend_blocks_entry():
+    series = build_linear_series(n=260, step=1.0)
+    ta = build_ta(
+        Direction.BULLISH,
+        price=360.0,
+        supports=[355.0],
+        resistances=[375.0],
+        adx=30.0,
+        weekly=Direction.BEARISH,
+    )
+    plan = build_risk_plan(series, PARAMS, technical=ta)
+    pb = build_entry_playbook(ta, plan, min_rr=2.0)
+    assert pb.ready is False
+    assert _gate(pb, "Allineato").passed is False
+
+
 def test_low_rr_closes_rr_gate():
     series = build_linear_series(n=260, step=1.0)
     ta = build_ta(Direction.BULLISH, price=360.0, supports=[], resistances=[362.0])

@@ -19,7 +19,7 @@ def test_uptrend_is_computed_and_bullish():
     ta = analyze_technical(build_linear_series(n=260, start=100, step=1.0))
     assert ta.computed is True
     assert ta.current_price is not None
-    assert len(ta.signals) == 6
+    assert len(ta.signals) == 7
     assert "rialzista" in ta.trend_summary.lower()
     # ogni segnale ha una spiegazione non vuota
     assert all(s.rationale for s in ta.signals)

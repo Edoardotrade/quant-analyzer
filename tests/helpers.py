@@ -163,8 +163,29 @@ def build_ta(
     resistances: list[float] | None = None,
     symbol: str = "X",
     n_bars: int = 60,
+    adx: float | None = None,
+    weekly: Direction | None = None,
 ) -> TechnicalAnalysis:
-    """TechnicalAnalysis controllata per testare il risk planner in isolamento."""
+    """TechnicalAnalysis controllata per testare risk planner e piano d'ingresso."""
+    signals = [
+        Signal(
+            name="Trend (SMA 20/50/200)",
+            value=None,
+            state="test",
+            direction=direction,
+            rationale="test",
+        )
+    ]
+    if adx is not None:
+        signals.append(
+            Signal(
+                name="Forza del trend (ADX)",
+                value=adx,
+                state="test",
+                direction=Direction.NEUTRAL,
+                rationale="test",
+            )
+        )
     return TechnicalAnalysis(
         symbol=symbol,
         asset_class=AssetClass.EQUITY,
@@ -173,15 +194,8 @@ def build_ta(
         current_price=price,
         computed=True,
         trend_summary="(test)",
-        signals=[
-            Signal(
-                name="Trend (SMA 20/50/200)",
-                value=None,
-                state="test",
-                direction=direction,
-                rationale="test",
-            )
-        ],
+        weekly_trend=weekly,
+        signals=signals,
         support_resistance=SupportResistance(
             current_price=price,
             supports=supports or [],

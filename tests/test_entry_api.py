@@ -26,7 +26,7 @@ def test_entry_ok(tmp_path):
     assert resp.status_code == 200
     body = resp.json()
     assert body["playbook"]["side"] in ("long", "short", "none")
-    assert len(body["playbook"]["gates"]) == 4
+    assert len(body["playbook"]["gates"]) == 6
     assert "ready" in body["playbook"]
     assert body["disclaimer"] == DISCLAIMER
 

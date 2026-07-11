@@ -27,7 +27,7 @@ def test_technical_ok(tmp_path):
     body = resp.json()
     assert body["analysis"]["computed"] is True
     assert body["analysis"]["symbol"] == "AAPL"
-    assert len(body["analysis"]["signals"]) == 6
+    assert len(body["analysis"]["signals"]) == 7
     assert body["disclaimer"] == DISCLAIMER
     # ogni segnale espone la sua spiegazione
     assert all(s["rationale"] for s in body["analysis"]["signals"])

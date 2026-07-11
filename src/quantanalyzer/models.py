@@ -265,6 +265,7 @@ class TechnicalAnalysis(BaseModel):
     current_price: float | None = None
     computed: bool
     trend_summary: str
+    weekly_trend: Direction | None = None
     signals: list[Signal] = Field(default_factory=list)
     support_resistance: SupportResistance | None = None
     data_quality: DataQuality

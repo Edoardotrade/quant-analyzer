@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from quantanalyzer.indicators import (
+    adx,
     atr,
     bollinger,
     ema,
@@ -64,6 +65,18 @@ def test_true_range_and_atr_constant():
     tr = true_range(df)
     assert np.allclose(tr.to_numpy(), 2.0)
     assert abs(atr(df, 14).dropna().iloc[-1] - 2.0) < 1e-9
+
+
+def test_adx_high_for_strong_trend_and_bounded():
+    idx = pd.date_range("2024-01-01", periods=60, freq="D")
+    close = np.arange(100.0, 160.0, 1.0)
+    df = pd.DataFrame(
+        {"open": close - 1, "high": close + 0.5, "low": close - 0.5, "close": close}, index=idx
+    )
+    a = adx(df, 14).dropna()
+    assert a.iloc[-1] > 25  # trend forte -> ADX alto
+    assert a.min() >= 0.0
+    assert a.max() <= 100.0001
 
 
 def test_bollinger_ordering():

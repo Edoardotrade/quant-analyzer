@@ -15,6 +15,7 @@ import pandas as pd
 
 from ..data.quality import assess
 from ..indicators import (
+    adx,
     atr,
     bollinger,
     last_slope,
@@ -328,6 +329,58 @@ def _support_resistance(df: pd.DataFrame, price: float, p: IndicatorParams) -> S
     )
 
 
+def _adx_signal(df: pd.DataFrame, p: IndicatorParams) -> Signal:
+    value = _last(adx(df, p.atr_period))
+    if value is None:
+        return Signal(
+            name="Forza del trend (ADX)",
+            value=None,
+            state="n/d",
+            direction=Direction.NEUTRAL,
+            rationale="Storico insufficiente per calcolare l'ADX.",
+        )
+    if value >= 25:
+        state = "trend forte"
+    elif value >= 20:
+        state = "trend moderato"
+    else:
+        state = "trend debole/laterale"
+    rationale = (
+        f"ADX({p.atr_period}) = {value:.1f}. Misura la FORZA del trend (non la direzione): "
+        "sopra 25 il trend è robusto, sotto 20 il mercato è laterale e gli ingressi di tendenza "
+        "rendono meno. Serve a filtrare i falsi segnali nelle fasi senza direzione."
+    )
+    return Signal(
+        name="Forza del trend (ADX)",
+        value=_round(value, 1),
+        state=state,
+        direction=Direction.NEUTRAL,
+        rationale=rationale,
+    )
+
+
+def _weekly_direction(df: pd.DataFrame) -> Direction | None:
+    """Direzione del trend sul timeframe SETTIMANALE (ricampionando i dati giornalieri)."""
+    weekly = (
+        df.resample("W")
+        .agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
+        .dropna()
+    )
+    if len(weekly) < 12:
+        return None
+    wclose = weekly["close"]
+    ma = _last(sma(wclose, 10))
+    if ma is None:
+        return None
+    price = float(wclose.iloc[-1])
+    slope = last_slope(sma(wclose, 10), 10)
+    if price > ma and slope >= 0:
+        return Direction.BULLISH
+    if price < ma and slope <= 0:
+        return Direction.BEARISH
+    return Direction.NEUTRAL
+
+
 def _synthesize(signals: list[Signal]) -> str:
     bull = sum(1 for s in signals if s.direction == Direction.BULLISH)
     bear = sum(1 for s in signals if s.direction == Direction.BEARISH)
@@ -399,6 +452,7 @@ def analyze_technical(
         _trend_signal(close, p),
         _rsi_signal(close, p),
         _macd_signal(close, p),
+        _adx_signal(df, p),
         _atr_signal(df, price, p),
         _bollinger_signal(close, price, p),
         _volume_signal(df, p),
@@ -415,6 +469,7 @@ def analyze_technical(
         **common,
         computed=True,
         trend_summary=_synthesize(signals),
+        weekly_trend=_weekly_direction(df),
         signals=signals,
         support_resistance=sr,
         notes=notes,

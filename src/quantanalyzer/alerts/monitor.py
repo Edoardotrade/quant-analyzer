@@ -69,6 +69,32 @@ def format_alert(sig: OperatingSignal) -> str:
     )
 
 
+def build_digest(signals: Sequence[OperatingSignal]) -> str:
+    """Riepilogo giornaliero di tutti i mercati della watchlist."""
+    enters = [s for s in signals if s.action == SignalAction.ENTER]
+    lines = ["📊 <b>Riepilogo giornaliero — Quant Analyzer</b>", ""]
+    if enters:
+        lines.append("🟢 <b>Pronti all'ingresso:</b>")
+        for s in enters:
+            verbo = "COMPRA" if s.side.value == "long" else "VENDI"
+            chiuso = " 🔒" if not s.market_open else ""
+            lines.append(
+                f"• {s.symbol}: {verbo} ~{s.entry} (SL {s.stop_loss} / TP {s.take_profit}){chiuso}"
+            )
+    else:
+        lines.append("Nessun mercato pronto all'ingresso adesso.")
+    lines.append("")
+    lines.append("<b>Stato mercati:</b>")
+    icons = {"entra": "🟢", "aspetta": "⏳", "nessuno": "⚠️"}
+    for s in signals:
+        icon = icons.get(s.action.value, "•")
+        chiuso = " 🔒" if not s.market_open else ""
+        lines.append(f"{icon} {s.symbol}: {s.action.value}{chiuso}")
+    lines.append("")
+    lines.append(f"<i>{DISCLAIMER_SHORT}</i>")
+    return "\n".join(lines)
+
+
 def evaluate_alerts(
     signals: Sequence[OperatingSignal],
     state: dict[str, bool],

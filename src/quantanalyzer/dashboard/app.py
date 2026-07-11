@@ -8,6 +8,8 @@ Avvio:  streamlit run src/quantanalyzer/dashboard/app.py
 
 from __future__ import annotations
 
+import os
+
 import altair as alt
 import streamlit as st
 
@@ -23,6 +25,15 @@ from quantanalyzer.report.builder import build_report
 from quantanalyzer.report.render import to_html, to_markdown, to_pdf
 
 st.set_page_config(page_title="Quant Analyzer", page_icon="📊", layout="wide")
+
+# Su Streamlit Cloud le chiavi si mettono nei "Secrets": le esportiamo come
+# variabili d'ambiente così la configurazione (pydantic-settings) le legge.
+try:
+    for _k, _v in st.secrets.items():
+        if isinstance(_v, str):
+            os.environ.setdefault(_k, _v)
+except Exception:  # noqa: BLE001 — nessun secret configurato
+    pass
 
 
 @st.cache_resource

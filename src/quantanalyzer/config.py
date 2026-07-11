@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     # --- Chiavi di terze parti ---
     alpha_vantage_api_key: str | None = Field(default=None, alias="ALPHA_VANTAGE_API_KEY")
+    twelvedata_api_key: str | None = Field(default=None, alias="TWELVEDATA_API_KEY")
 
     # --- Notifiche Telegram ---
     telegram_bot_token: str | None = Field(default=None, alias="TELEGRAM_BOT_TOKEN")

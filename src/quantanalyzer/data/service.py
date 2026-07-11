@@ -16,6 +16,7 @@ from ..models import AssetClass, Interval, PriceSeries
 from .base import DataFetchError, DataUnavailableError, MarketDataProvider
 from .cache import FileCache, make_key
 from .ccxt_provider import CCXTProvider
+from .twelvedata_provider import TwelveDataProvider
 from .yfinance_provider import YFinanceProvider
 
 
@@ -36,18 +37,17 @@ class MarketDataService:
             providers
             if providers is not None
             else [
+                # Twelve Data prima (affidabile da cloud, richiede chiave: se assente
+                # supports()=False e si passa a yfinance), poi yfinance, poi ccxt.
+                TwelveDataProvider(),
                 YFinanceProvider(),
                 CCXTProvider(exchange_id=self.settings.ccxt_exchange),
             ]
         )
 
-    def provider_for(self, asset_class: AssetClass) -> MarketDataProvider:
-        for provider in self.providers:
-            if provider.supports(asset_class):
-                return provider
-        raise DataUnavailableError(
-            f"Nessun provider configurato per la classe di asset '{asset_class.value}'."
-        )
+    def providers_for(self, asset_class: AssetClass) -> list[MarketDataProvider]:
+        """Provider che supportano la classe, in ordine di priorità."""
+        return [p for p in self.providers if p.supports(asset_class)]
 
     def get_prices(
         self,
@@ -59,37 +59,46 @@ class MarketDataService:
         use_cache: bool = True,
         force_refresh: bool = False,
     ) -> PriceSeries:
-        """Restituisce una PriceSeries applicando cache e fail-soft.
+        """Restituisce una PriceSeries con cache, fallback tra fonti e fail-soft.
 
-        Ordine di preferenza:
-          1. cache fresca (se ``use_cache`` e non ``force_refresh``);
-          2. fetch dal provider;
-          3. cache stantia come ripiego se il fetch fallisce.
+        Ordine: cache fresca → prova ogni fonte che supporta l'asset (in ordine) →
+        cache stantia come ultimo ripiego.
         """
-        provider = self.provider_for(asset_class)
-        key = make_key(provider.name, symbol, asset_class, interval)
+        providers = self.providers_for(asset_class)
+        if not providers:
+            raise DataUnavailableError(
+                f"Nessun provider configurato per la classe di asset '{asset_class.value}'."
+            )
 
+        # chiave di cache indipendente dalla fonte: i dati sono gli stessi
+        key = make_key("mkt", symbol, asset_class, interval)
         cached = self.cache.load(key) if use_cache else None
         if cached is not None and not force_refresh and self.cache.is_fresh(cached):
             return cached
 
-        try:
-            series = provider.fetch(
-                symbol, asset_class=asset_class, interval=interval, lookback=lookback
-            )
-        except (DataFetchError, DataUnavailableError):
-            # Fail-soft: se abbiamo dati in cache (anche stantii), meglio quelli
-            # che niente — ma NON silenziamo il problema a monte.
-            if cached is not None:
-                return cached
-            raise
-        except Exception as exc:  # errore imprevisto (parsing, validazione, ...)
-            if cached is not None:
-                return cached
-            raise DataFetchError(
-                f"Errore imprevisto dal provider '{provider.name}' per {symbol}: {exc}"
-            ) from exc
+        errors: list[str] = []
+        had_unavailable = False
+        had_fetch_error = False
+        for provider in providers:
+            try:
+                series = provider.fetch(
+                    symbol, asset_class=asset_class, interval=interval, lookback=lookback
+                )
+                if use_cache:
+                    self.cache.store(key, series)
+                return series
+            except DataUnavailableError as exc:
+                had_unavailable = True
+                errors.append(f"{provider.name}: {exc}")
+            except Exception as exc:  # noqa: BLE001 — errore di fetch: prova la fonte successiva
+                had_fetch_error = True
+                errors.append(f"{provider.name}: {exc}")
 
-        if use_cache:
-            self.cache.store(key, series)
-        return series
+        # tutte le fonti hanno fallito
+        if cached is not None:
+            return cached
+        message = f"Tutte le fonti hanno fallito per '{symbol}': {'; '.join(errors)}"
+        # solo "dato non disponibile" (simbolo inesistente) -> 404; errore di fetch -> 502
+        if had_unavailable and not had_fetch_error:
+            raise DataUnavailableError(message)
+        raise DataFetchError(message)

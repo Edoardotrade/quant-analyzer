@@ -29,7 +29,7 @@ def test_fetch_when_cache_empty(tmp_path):
     assert provider.calls == 1
     assert len(series) == 40
     # è stata scritta in cache
-    key = make_key("fake", "TEST", AssetClass.EQUITY, Interval.D1)
+    key = make_key("mkt", "TEST", AssetClass.EQUITY, Interval.D1)
     assert svc.cache.load(key) is not None
 
 
@@ -39,7 +39,7 @@ def test_fresh_cache_avoids_provider(tmp_path):
     svc = _service(tmp_path, provider, now=lambda: now, ttl=60)
 
     # Pre-popola la cache con dati freschi.
-    key = make_key("fake", "TEST", AssetClass.EQUITY, Interval.D1)
+    key = make_key("mkt", "TEST", AssetClass.EQUITY, Interval.D1)
     svc.cache.store(key, build_series(n=40, fetched_at=now - timedelta(minutes=5)))
 
     series = svc.get_prices("TEST", AssetClass.EQUITY, Interval.D1)
@@ -53,7 +53,7 @@ def test_force_refresh_bypasses_cache(tmp_path):
     provider = FakeProvider(build_series(n=40, fetched_at=now))
     svc = _service(tmp_path, provider, now=lambda: now, ttl=60)
 
-    key = make_key("fake", "TEST", AssetClass.EQUITY, Interval.D1)
+    key = make_key("mkt", "TEST", AssetClass.EQUITY, Interval.D1)
     svc.cache.store(key, build_series(n=40, fetched_at=now - timedelta(minutes=5)))
 
     svc.get_prices("TEST", AssetClass.EQUITY, Interval.D1, force_refresh=True)
@@ -66,7 +66,7 @@ def test_stale_cache_used_as_fallback_on_error(tmp_path):
     svc = _service(tmp_path, provider, now=lambda: now, ttl=60)
 
     # Cache stantia (oltre il TTL).
-    key = make_key("fake", "TEST", AssetClass.EQUITY, Interval.D1)
+    key = make_key("mkt", "TEST", AssetClass.EQUITY, Interval.D1)
     svc.cache.store(key, build_series(n=40, fetched_at=now - timedelta(hours=5)))
 
     series = svc.get_prices("TEST", AssetClass.EQUITY, Interval.D1)
@@ -80,6 +80,19 @@ def test_error_without_cache_propagates(tmp_path):
     svc = _service(tmp_path, provider)
     with pytest.raises(DataFetchError):
         svc.get_prices("TEST", AssetClass.EQUITY, Interval.D1)
+
+
+def test_falls_back_to_next_provider(tmp_path):
+    # la prima fonte fallisce -> si usa la seconda (chiave cache indipendente dalla fonte)
+    first = FailingProvider(error=DataFetchError("prima giù"))
+    second = FakeProvider(build_series(n=10))
+    svc = _service(tmp_path, first)
+    svc.providers = [first, second]
+
+    series = svc.get_prices("TEST", AssetClass.EQUITY, Interval.D1)
+    assert len(series) == 10
+    assert first.calls == 1
+    assert second.calls == 1
 
 
 def test_no_provider_for_class_raises(tmp_path):

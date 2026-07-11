@@ -202,7 +202,10 @@ else:
 # Avanzato: Swagger dentro l'app
 # --------------------------------------------------------------------------- #
 with st.expander("⚙️ Strumenti avanzati — API / Swagger"):
-    st.caption("Documentazione interattiva dell'API (server API attivo sulla porta 8000).")
-    st.iframe("http://localhost:8000/docs", height=600, scrolling=True)
+    st.caption(
+        "L'API con documentazione Swagger è disponibile eseguendo il server **in locale** "
+        "(`uvicorn quantanalyzer.api.app:app`) e aprendo http://localhost:8000/docs. "
+        "Nella versione online non è attiva."
+    )
 
 st.caption(f"⚠️ {DISCLAIMER}")

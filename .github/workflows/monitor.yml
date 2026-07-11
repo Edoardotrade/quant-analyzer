@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]        # ogni push su main avvia subito un controllo
   schedule:
-    # ogni 15 minuti (orari UTC; GitHub può ritardare di qualche minuto sotto carico)
-    - cron: "*/15 * * * *"
+    # ogni 30 minuti (segnali giornalieri: basta e avanza, e resta nel limite Twelve Data)
+    - cron: "*/30 * * * *"
   workflow_dispatch: {}   # permette l'avvio manuale dalla scheda "Actions"
 
 # evita che due esecuzioni si accavallino

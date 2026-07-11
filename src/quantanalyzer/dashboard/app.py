@@ -113,8 +113,8 @@ with st.sidebar:
             "GBPUSD forex\n"
             "USDJPY forex\n"
             "AUDUSD forex\n"
-            "^GSPC index\n"
-            "^IXIC index\n"
+            "SPY etf\n"
+            "QQQ etf\n"
             "BTC/USDT crypto\n"
             "ETH/USDT crypto"
         ),

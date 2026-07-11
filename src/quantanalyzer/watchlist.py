@@ -10,8 +10,8 @@ DEFAULT_WATCHLIST: list[tuple[str, AssetClass]] = [
     ("GBPUSD", AssetClass.FOREX),
     ("USDJPY", AssetClass.FOREX),
     ("AUDUSD", AssetClass.FOREX),
-    ("^GSPC", AssetClass.INDEX),
-    ("^IXIC", AssetClass.INDEX),
+    ("SPY", AssetClass.ETF),  # ETF S&P 500 (≈ ^GSPC, affidabile via Twelve Data)
+    ("QQQ", AssetClass.ETF),  # ETF Nasdaq-100 (≈ ^IXIC)
     ("BTC/USDT", AssetClass.CRYPTO),
     ("ETH/USDT", AssetClass.CRYPTO),
 ]

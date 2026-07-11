@@ -85,7 +85,10 @@ class MarketDataService:
                     symbol, asset_class=asset_class, interval=interval, lookback=lookback
                 )
                 if use_cache:
-                    self.cache.store(key, series)
+                    try:
+                        self.cache.store(key, series)
+                    except Exception:  # noqa: BLE001 — cache non scrivibile: non è fatale
+                        pass
                 return series
             except DataUnavailableError as exc:
                 had_unavailable = True

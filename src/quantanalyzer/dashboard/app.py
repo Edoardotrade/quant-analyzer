@@ -43,8 +43,15 @@ def _service() -> MarketDataService:
 
 @st.cache_data(show_spinner="Scarico i dati…")
 def _load(symbol: str, asset_class: str, interval: str, lookback: int, _nonce: int):
+    # use_cache=True -> riusa i dati in cache (veloce, poche chiamate all'API);
+    # _nonce>0 (pulsante "Aggiorna") forza un download fresco.
     return _service().get_prices(
-        symbol, AssetClass(asset_class), Interval(interval), lookback=lookback, use_cache=False
+        symbol,
+        AssetClass(asset_class),
+        Interval(interval),
+        lookback=lookback,
+        use_cache=True,
+        force_refresh=_nonce > 0,
     )
 
 
@@ -133,6 +140,7 @@ with st.sidebar:
     lookback = st.slider("Storico (barre)", 60, 2000, 300, 20)
 
     if st.button("🔄 Aggiorna adesso", width="stretch"):
+        st.session_state["reload_n"] = st.session_state.get("reload_n", 0) + 1
         st.cache_data.clear()
 
 items = _parse_watchlist(watch_text)
@@ -152,7 +160,9 @@ if not items:
 for symbol, asset_class in items:
     with st.container(border=True):
         try:
-            series = _load(symbol, asset_class.value, interval, lookback, 0)
+            series = _load(
+                symbol, asset_class.value, interval, lookback, st.session_state.get("reload_n", 0)
+            )
         except DataError as exc:
             st.error(f"❌ {symbol}: dati non disponibili — {exc}")
             continue

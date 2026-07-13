@@ -20,6 +20,18 @@ from .twelvedata_provider import TwelveDataProvider
 from .yfinance_provider import YFinanceProvider
 
 
+def _crypto_exchange_order(primary: str) -> list[str]:
+    """Ordine di prova degli exchange crypto (il primo è quello configurato).
+
+    Provando più exchange in cascata, le crypto funzionano su qualsiasi server:
+    alcuni exchange sono bloccati da certi IP cloud (es. Binance dagli USA),
+    ma almeno uno tra questi è quasi sempre raggiungibile.
+    """
+    order = [primary, "kraken", "coinbase", "binance", "bitstamp"]
+    seen: set[str] = set()
+    return [e for e in order if e and not (e in seen or seen.add(e))]
+
+
 class MarketDataService:
     """Punto d'ingresso unico per ottenere serie di prezzo."""
 
@@ -33,17 +45,17 @@ class MarketDataService:
         self.cache = cache or FileCache(
             self.settings.cache_dir, self.settings.cache_ttl_minutes
         )
-        self.providers: list[MarketDataProvider] = list(
-            providers
-            if providers is not None
-            else [
-                # Twelve Data prima (affidabile da cloud, richiede chiave: se assente
-                # supports()=False e si passa a yfinance), poi yfinance, poi ccxt.
-                TwelveDataProvider(),
-                YFinanceProvider(),
-                CCXTProvider(exchange_id=self.settings.ccxt_exchange),
+        if providers is not None:
+            self.providers: list[MarketDataProvider] = list(providers)
+        else:
+            # Twelve Data prima (affidabile da cloud, richiede chiave: se assente
+            # supports()=False e si passa a yfinance), poi yfinance, poi più exchange
+            # crypto in cascata (così le crypto funzionano su qualsiasi server).
+            crypto = [
+                CCXTProvider(exchange_id=e)
+                for e in _crypto_exchange_order(self.settings.ccxt_exchange)
             ]
-        )
+            self.providers = [TwelveDataProvider(), YFinanceProvider(), *crypto]
 
     def providers_for(self, asset_class: AssetClass) -> list[MarketDataProvider]:
         """Provider che supportano la classe, in ordine di priorità."""

@@ -56,7 +56,8 @@ class CCXTProvider:
             exchange_cls = getattr(ccxt, self._exchange_id)
         except AttributeError as exc:
             raise DataFetchError(f"Exchange ccxt sconosciuto: '{self._exchange_id}'") from exc
-        self._exchange = exchange_cls({"enableRateLimit": True})
+        # timeout breve: se un exchange è bloccato, fallisce in fretta e si passa al successivo
+        self._exchange = exchange_cls({"enableRateLimit": True, "timeout": 10000})
         return self._exchange
 
     def fetch(

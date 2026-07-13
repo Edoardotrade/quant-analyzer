@@ -202,6 +202,11 @@ for symbol, asset_class in items:
 # --------------------------------------------------------------------------- #
 st.divider()
 st.subheader("🔔 Avvisi su Telegram")
+st.caption(
+    "Gli avvisi automatici vengono inviati dal monitor sul cloud (GitHub Actions), "
+    "che gira in autonomia ogni 30 minuti anche quando questa dashboard è chiusa. "
+    "Se in passato ti sono arrivati messaggi, il sistema di avvisi è attivo."
+)
 if settings.telegram_ready:
     st.success("Telegram configurato ✅ — riceverai un avviso quando un mercato diventa 🟢.")
     if st.button("Invia un avviso di prova"):
@@ -215,8 +220,10 @@ if settings.telegram_ready:
             st.error(str(exc))
 else:
     st.info(
-        "Telegram non ancora configurato. Metti TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID nel file "
-        ".env (istruzioni nel README / .env.example), poi riavvia l'app."
+        "Il pulsante di test qui sotto non è attivo perché **questa dashboard** non ha i "
+        "segreti Telegram (sono un'app separata dal monitor). Gli avvisi automatici "
+        "funzionano lo stesso. Per attivare anche il test da qui: Streamlit → Settings → "
+        "Secrets, aggiungi TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID, poi riavvia l'app."
     )
 
 # --------------------------------------------------------------------------- #

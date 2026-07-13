@@ -14,8 +14,11 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "pydantic>=2.6",
     "pydantic-settings>=2.2",
-    "pandas>=2.0",
-    "numpy>=1.24",
+    # Bound superiori per evitare che venga risolto lo stack nativo bleeding-edge
+    # (numpy 2.5 / pandas 3.0), che causava un Segmentation fault su Streamlit Cloud.
+    # Questi range risolvono alle versioni validate (pandas 2.2.3, numpy 1.26.4).
+    "pandas>=2.2,<2.3",
+    "numpy>=1.26,<2.0",
     "yfinance>=0.2.40",
     "ccxt>=4.2",
     "httpx>=0.27",

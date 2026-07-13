@@ -46,7 +46,8 @@ class Settings(BaseSettings):
         return bool(self.telegram_bot_token and self.telegram_chat_id)
 
     # --- Configurazione applicativa ---
-    ccxt_exchange: str = Field(default="binance", alias="QA_CCXT_EXCHANGE")
+    # Kraken: raggiungibile anche dai server cloud/USA (Binance li blocca).
+    ccxt_exchange: str = Field(default="kraken", alias="QA_CCXT_EXCHANGE")
     cache_dir: Path = Field(default=Path(".cache"), alias="QA_CACHE_DIR")
     cache_ttl_minutes: int = Field(default=60, alias="QA_CACHE_TTL_MINUTES", ge=0)
     request_timeout_seconds: float = Field(default=15.0, alias="QA_REQUEST_TIMEOUT", gt=0)

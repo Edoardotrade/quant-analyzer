@@ -36,7 +36,7 @@ class CCXTProvider:
         self,
         exchange: Any | None = None,
         *,
-        exchange_id: str = "binance",
+        exchange_id: str = "kraken",
         now: Callable[[], datetime] | None = None,
     ) -> None:
         # ``exchange`` già istanziato (per i test) oppure creato lazy da exchange_id.

@@ -135,9 +135,9 @@ with st.sidebar:
     min_rr = st.slider("Guadagno minimo vs rischio (R:R)", 1.0, 5.0, 2.0, 0.5)
     atr_mult = st.slider("Ampiezza stop (× ATR)", 0.5, 4.0, 1.5, 0.5)
     interval = st.selectbox(
-        "Orizzonte", [i.value for i in Interval], index=[i.value for i in Interval].index("1h")
+        "Orizzonte", [i.value for i in Interval], index=[i.value for i in Interval].index("1d")
     )
-    lookback = st.slider("Storico (barre)", 60, 2000, 720, 20)
+    lookback = st.slider("Storico (barre)", 60, 2000, 300, 20)
 
     if st.button("🔄 Aggiorna adesso", width="stretch"):
         st.session_state["reload_n"] = st.session_state.get("reload_n", 0) + 1

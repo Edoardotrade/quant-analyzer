@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from .models import AssetClass, Interval, RiskParams
 
+# NB: EURUSD e GBPUSD rimossi dopo il backtest del sistema reale (2026-07-29):
+# perdenti su entrambi i timeframe (PF < 0.5). Restano i mercati con edge/rischio
+# migliore sul giornaliero (oro, USDJPY, azionari, crypto).
 DEFAULT_WATCHLIST: list[tuple[str, AssetClass]] = [
     ("XAUUSD", AssetClass.FOREX),
-    ("EURUSD", AssetClass.FOREX),
-    ("GBPUSD", AssetClass.FOREX),
     ("USDJPY", AssetClass.FOREX),
     ("AUDUSD", AssetClass.FOREX),
     ("SPY", AssetClass.ETF),  # ETF S&P 500 (≈ ^GSPC, affidabile via Twelve Data)
@@ -19,8 +20,8 @@ DEFAULT_WATCHLIST: list[tuple[str, AssetClass]] = [
 DEFAULT_PARAMS = RiskParams(capital=10_000, risk_pct=1.0, min_rr=2.0, atr_stop_mult=1.5)
 
 # Timeframe operativo condiviso da monitor, digest e dashboard.
-# Intraday 1h: molti più segnali e più veloci (reazione in ore, non giorni),
-# mantenendo gli stessi standard di qualità. Il filtro di grado superiore
-# diventa automaticamente il giornaliero. Lookback ampio per SMA lunghe + filtro.
-DEFAULT_INTERVAL = Interval.H1
-DEFAULT_LOOKBACK = 720
+# GIORNALIERO: il backtest del sistema reale (2026-07-29) mostra che il daily
+# batte nettamente l'1h (5/9 mercati positivi vs quasi tutti negativi su 1h) con
+# drawdown bassi. Filtro di grado superiore = settimanale. Meno segnali ma migliori.
+DEFAULT_INTERVAL = Interval.D1
+DEFAULT_LOOKBACK = 300

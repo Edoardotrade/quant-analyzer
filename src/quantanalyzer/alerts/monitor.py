@@ -15,6 +15,7 @@ from pathlib import Path
 from ..analysis.signal import build_operating_signal
 from ..data.service import MarketDataService
 from ..models import AssetClass, Interval, OperatingSignal, RiskParams, SignalAction
+from ..watchlist import DEFAULT_INTERVAL, DEFAULT_LOOKBACK
 from .telegram import send_telegram_message
 
 DISCLAIMER_SHORT = "Analisi tecnica, non consulenza. Decisione e rischio tuoi."
@@ -24,8 +25,8 @@ def check_watchlist(
     items: Sequence[tuple[str, AssetClass]],
     params: RiskParams,
     *,
-    interval: Interval = Interval.D1,
-    lookback: int = 300,
+    interval: Interval = DEFAULT_INTERVAL,
+    lookback: int = DEFAULT_LOOKBACK,
     service: MarketDataService | None = None,
 ) -> list[OperatingSignal]:
     """Calcola il segnale operativo per ogni mercato della watchlist."""

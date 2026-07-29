@@ -29,6 +29,7 @@ from ..indicators import (
 from ..models import (
     Direction,
     IndicatorParams,
+    Interval,
     PriceSeries,
     Signal,
     SupportResistance,
@@ -359,21 +360,44 @@ def _adx_signal(df: pd.DataFrame, p: IndicatorParams) -> Signal:
     )
 
 
-def _weekly_direction(df: pd.DataFrame) -> Direction | None:
-    """Direzione del trend sul timeframe SETTIMANALE (ricampionando i dati giornalieri)."""
-    weekly = (
-        df.resample("W")
+# Filtro di grado superiore: regola di ricampionamento in base al timeframe operativo.
+# operativo -> (regola resample pandas, minimo barre superiori richieste, etichetta)
+# Così l'1h viene filtrato dal giornaliero, il giornaliero dal settimanale, ecc.
+_HTF_RULE: dict[Interval, tuple[str, int, str]] = {
+    Interval.M15: ("4h", 20, "4 ore"),
+    Interval.H1: ("D", 15, "giornaliero"),
+    Interval.D1: ("W", 12, "settimanale"),
+    Interval.W1: ("ME", 10, "mensile"),
+    Interval.MO1: ("ME", 10, "mensile"),
+}
+
+
+def higher_tf_label(interval: Interval) -> str:
+    """Etichetta leggibile del timeframe di grado superiore (per i messaggi)."""
+    return _HTF_RULE.get(interval, ("W", 12, "settimanale"))[2]
+
+
+def _higher_tf_direction(df: pd.DataFrame, interval: Interval) -> Direction | None:
+    """Direzione del trend sul timeframe SUPERIORE, adattato al timeframe operativo.
+
+    Ricampiona i dati al grado superiore (es. 1h -> giornaliero, giornaliero ->
+    settimanale) e ne legge la direzione con una SMA(10). Serve come filtro
+    multi-timeframe: non si opera controtendenza rispetto al grado superiore.
+    """
+    rule, min_bars, _label = _HTF_RULE.get(interval, ("W", 12, "settimanale"))
+    htf = (
+        df.resample(rule)
         .agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
         .dropna()
     )
-    if len(weekly) < 12:
+    if len(htf) < min_bars:
         return None
-    wclose = weekly["close"]
-    ma = _last(sma(wclose, 10))
+    hclose = htf["close"]
+    ma = _last(sma(hclose, 10))
     if ma is None:
         return None
-    price = float(wclose.iloc[-1])
-    slope = last_slope(sma(wclose, 10), 10)
+    price = float(hclose.iloc[-1])
+    slope = last_slope(sma(hclose, 10), 10)
     if price > ma and slope >= 0:
         return Direction.BULLISH
     if price < ma and slope <= 0:
@@ -469,7 +493,7 @@ def analyze_technical(
         **common,
         computed=True,
         trend_summary=_synthesize(signals),
-        weekly_trend=_weekly_direction(df),
+        weekly_trend=_higher_tf_direction(df, series.interval),
         signals=signals,
         support_resistance=sr,
         notes=notes,

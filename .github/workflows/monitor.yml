@@ -4,8 +4,10 @@ on:
   push:
     branches: [main]        # ogni push su main avvia subito un controllo
   schedule:
-    # ogni 30 minuti (segnali giornalieri: basta e avanza, e resta nel limite Twelve Data)
-    - cron: "*/30 * * * *"
+    # ogni 15 minuti: timeframe operativo intraday (1h), reazione rapida ai setup.
+    # Se Twelve Data (forex/ETF) raggiunge il limite giornaliero, il servizio
+    # ripiega automaticamente su yfinance, quindi il monitor non si ferma.
+    - cron: "*/15 * * * *"
   workflow_dispatch: {}   # permette l'avvio manuale dalla scheda "Actions"
 
 # evita che due esecuzioni si accavallino

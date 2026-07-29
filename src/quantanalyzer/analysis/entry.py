@@ -15,6 +15,7 @@ from ..models import (
     RiskPlan,
     TechnicalAnalysis,
 )
+from .technical import higher_tf_label
 
 
 def _rsi_value(ta: TechnicalAnalysis) -> float | None:
@@ -109,15 +110,16 @@ def build_entry_playbook(
         g5, d5 = False, f"ADX {adx_val:.0f} (<20): mercato laterale, ingresso poco affidabile."
     gates.append(EntryGate(name="Forza del trend (ADX)", passed=g5, detail=d5))
 
-    # Cancello 6 — allineamento col timeframe superiore (settimanale)
+    # Cancello 6 — allineamento col timeframe di grado superiore (adattivo)
+    htf_label = higher_tf_label(ta.interval)
     weekly = ta.weekly_trend
     if weekly is None or weekly == Direction.NEUTRAL:
-        g6, d6 = True, "Trend settimanale neutro/non disponibile: nessun veto."
+        g6, d6 = True, f"Trend {htf_label} neutro/non disponibile: nessun veto."
     elif (long and weekly == Direction.BULLISH) or ((not long) and weekly == Direction.BEARISH):
-        g6, d6 = True, f"In linea col trend settimanale ({weekly.value})."
+        g6, d6 = True, f"In linea col trend {htf_label} ({weekly.value})."
     else:
-        g6, d6 = False, f"Contro il trend settimanale ({weekly.value}): controtendenza, rischioso."
-    gates.append(EntryGate(name="Allineato alla settimanale", passed=g6, detail=d6))
+        g6, d6 = False, f"Contro il trend {htf_label} ({weekly.value}): controtendenza, rischioso."
+    gates.append(EntryGate(name=f"Allineato al {htf_label}", passed=g6, detail=d6))
 
     ready = all(g.passed for g in gates)
 
@@ -170,7 +172,7 @@ def build_entry_playbook(
         if not g5:
             triggers.append("Attendi che il trend prenda forza (ADX ≥ 20).")
         if not g6:
-            triggers.append(f"Attendi l'allineamento col trend settimanale ({weekly.value}).")
+            triggers.append(f"Attendi l'allineamento col trend {htf_label} ({weekly.value}).")
 
     if long:
         ref = f"{nearest_sup:.4f}" if nearest_sup is not None else str(plan.stop)

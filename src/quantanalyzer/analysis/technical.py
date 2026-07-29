@@ -366,6 +366,7 @@ def _adx_signal(df: pd.DataFrame, p: IndicatorParams) -> Signal:
 _HTF_RULE: dict[Interval, tuple[str, int, str]] = {
     Interval.M15: ("4h", 20, "4 ore"),
     Interval.H1: ("D", 15, "giornaliero"),
+    Interval.H4: ("D", 15, "giornaliero"),
     Interval.D1: ("W", 12, "settimanale"),
     Interval.W1: ("ME", 10, "mensile"),
     Interval.MO1: ("ME", 10, "mensile"),

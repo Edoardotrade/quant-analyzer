@@ -35,6 +35,7 @@ def build_operating_signal(series: PriceSeries, risk_params: RiskParams) -> Oper
     base = {
         "symbol": series.symbol,
         "asset_class": series.asset_class,
+        "interval": series.interval,
         "price": series.last_close,
         "as_of": series.end,
         "market_open": is_open,

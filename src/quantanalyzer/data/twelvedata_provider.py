@@ -18,6 +18,7 @@ from .base import DataFetchError, DataUnavailableError
 _TD_INTERVAL = {
     Interval.M15: "15min",
     Interval.H1: "1h",
+    Interval.H4: "4h",
     Interval.D1: "1day",
     Interval.W1: "1week",
     Interval.MO1: "1month",

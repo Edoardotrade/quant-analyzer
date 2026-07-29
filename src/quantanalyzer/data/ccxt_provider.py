@@ -20,6 +20,7 @@ from .base import DataFetchError, DataUnavailableError
 _CCXT_TIMEFRAME = {
     Interval.M15: "15m",
     Interval.H1: "1h",
+    Interval.H4: "4h",
     Interval.D1: "1d",
     Interval.W1: "1w",
     Interval.MO1: "1M",

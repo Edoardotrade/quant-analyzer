@@ -32,6 +32,7 @@ class Interval(str, Enum):
 
     M15 = "15m"
     H1 = "1h"
+    H4 = "4h"
     D1 = "1d"
     W1 = "1w"
     MO1 = "1mo"
@@ -374,6 +375,7 @@ class OperatingSignal(BaseModel):
     action: SignalAction
     side: PositionSide
     ready: bool
+    interval: Interval | None = None  # timeframe operativo del segnale
     price: float | None = None
     entry: float | None = None
     stop_loss: float | None = None

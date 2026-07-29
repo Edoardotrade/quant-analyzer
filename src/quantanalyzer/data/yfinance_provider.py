@@ -20,6 +20,7 @@ from .base import DataFetchError, DataUnavailableError
 _YF_INTERVAL = {
     Interval.M15: "15m",
     Interval.H1: "60m",
+    Interval.H4: "4h",  # yfinance non ha il 4h nativo: fallback che fallisce -> altra fonte
     Interval.D1: "1d",
     Interval.W1: "1wk",
     Interval.MO1: "1mo",
@@ -34,7 +35,7 @@ def _yf_period(interval: Interval, lookback: int) -> str:
     """
     if interval == Interval.M15:
         return "60d"
-    if interval == Interval.H1:
+    if interval in (Interval.H1, Interval.H4):
         return "730d"
     if interval == Interval.D1:
         years_needed = math.ceil(lookback / 252) + 1  # ~252 giorni di borsa/anno

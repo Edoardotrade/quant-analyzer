@@ -15,10 +15,33 @@ from pathlib import Path
 from ..analysis.signal import build_operating_signal
 from ..data.service import MarketDataService
 from ..models import AssetClass, Interval, OperatingSignal, RiskParams, SignalAction
-from ..watchlist import DEFAULT_INTERVAL, DEFAULT_LOOKBACK
+from ..watchlist import (
+    DEFAULT_INTERVAL,
+    DEFAULT_LOOKBACK,
+    WatchItem,
+    effective_params,
+)
 from .telegram import send_telegram_message
 
 DISCLAIMER_SHORT = "Analisi tecnica, non consulenza. Decisione e rischio tuoi."
+
+_TF_LABEL = {
+    Interval.M15: "15 min",
+    Interval.H1: "1 ora",
+    Interval.H4: "4 ore",
+    Interval.D1: "giornaliero",
+    Interval.W1: "settimanale",
+    Interval.MO1: "mensile",
+}
+
+
+def _tf(interval: Interval | None) -> str:
+    return _TF_LABEL.get(interval, "n/d") if interval else "n/d"
+
+
+def _state_key(sig: OperatingSignal) -> str:
+    """Chiave di stato per-segnale: simbolo + timeframe (oro-daily ≠ oro-4h)."""
+    return f"{sig.symbol}@{sig.interval.value if sig.interval else '?'}"
 
 
 def check_watchlist(
@@ -32,19 +55,28 @@ def check_watchlist(
     """Calcola il segnale operativo per ogni mercato della watchlist."""
     svc = service or MarketDataService()
     signals: list[OperatingSignal] = []
-    for symbol, asset_class in items:
+    for item in items:
+        # accetta sia WatchItem (con timeframe/override) sia semplici (simbolo, classe)
+        if isinstance(item, WatchItem):
+            symbol, asset_class = item.symbol, item.asset_class
+            it_interval, it_lookback = item.interval, item.lookback
+            it_params = effective_params(item, params)
+        else:
+            symbol, asset_class = item
+            it_interval, it_lookback, it_params = interval, lookback, params
         try:
-            series = svc.get_prices(symbol, asset_class, interval, lookback=lookback)
-            signals.append(build_operating_signal(series, params))
+            series = svc.get_prices(symbol, asset_class, it_interval, lookback=it_lookback)
+            signals.append(build_operating_signal(series, it_params))
         except Exception as exc:  # noqa: BLE001 — un asset rotto non ferma gli altri
             signals.append(
                 OperatingSignal(
                     symbol=symbol,
                     asset_class=asset_class,
+                    interval=it_interval,
                     action=SignalAction.NONE,
                     side="none",  # type: ignore[arg-type]
                     ready=False,
-                    headline=f"⚠️ {symbol}: dati non disponibili",
+                    headline=f"⚠️ {symbol} ({_tf(it_interval)}): dati non disponibili",
                     reason=str(exc),
                 )
             )
@@ -58,7 +90,7 @@ def format_alert(sig: OperatingSignal) -> str:
     if not sig.market_open:
         chiuso = f"🔒 {sig.market_note} — verifica all'apertura (possibile gap)\n"
     return (
-        f"🟢 <b>SEGNALE — {sig.symbol}</b>\n"
+        f"🟢 <b>SEGNALE — {sig.symbol}</b> <i>({_tf(sig.interval)})</i>\n"
         f"Operazione: <b>{verbo}</b>\n"
         f"Ingresso: ~{sig.entry}\n"
         f"🛑 Stop Loss: {sig.stop_loss}\n"
@@ -80,7 +112,8 @@ def build_digest(signals: Sequence[OperatingSignal]) -> str:
             verbo = "COMPRA" if s.side.value == "long" else "VENDI"
             chiuso = " 🔒" if not s.market_open else ""
             lines.append(
-                f"• {s.symbol}: {verbo} ~{s.entry} (SL {s.stop_loss} / TP {s.take_profit}){chiuso}"
+                f"• {s.symbol} [{_tf(s.interval)}]: {verbo} ~{s.entry} "
+                f"(SL {s.stop_loss} / TP {s.take_profit}){chiuso}"
             )
     else:
         lines.append("Nessun mercato pronto all'ingresso adesso.")
@@ -90,7 +123,7 @@ def build_digest(signals: Sequence[OperatingSignal]) -> str:
     for s in signals:
         icon = icons.get(s.action.value, "•")
         chiuso = " 🔒" if not s.market_open else ""
-        lines.append(f"{icon} {s.symbol}: {s.action.value}{chiuso}")
+        lines.append(f"{icon} {s.symbol} [{_tf(s.interval)}]: {s.action.value}{chiuso}")
     lines.append("")
     lines.append(f"<i>{DISCLAIMER_SHORT}</i>")
     return "\n".join(lines)
@@ -107,8 +140,9 @@ def evaluate_alerts(
     """
     fired: list[str] = []
     for sig in signals:
+        key = _state_key(sig)
         is_enter = sig.action == SignalAction.ENTER
-        was_enter = state.get(sig.symbol, False)
+        was_enter = state.get(key, False)
         if is_enter and not was_enter:
             try:
                 sent_ok = bool(notifier(format_alert(sig)))
@@ -116,11 +150,11 @@ def evaluate_alerts(
                 print(f"[monitor] invio avviso fallito per {sig.symbol}: {exc}", flush=True)
                 sent_ok = False
             if sent_ok:
-                fired.append(sig.symbol)
-                state[sig.symbol] = True
+                fired.append(key)
+                state[key] = True
             # se l'invio non riesce, NON marchiamo lo stato: si ritenta al giro dopo
         else:
-            state[sig.symbol] = is_enter
+            state[key] = is_enter
     return fired
 
 

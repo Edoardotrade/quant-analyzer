@@ -23,6 +23,7 @@ from quantanalyzer.data.service import MarketDataService
 from quantanalyzer.models import AssetClass, Interval, RiskParams, SignalAction
 from quantanalyzer.report.builder import build_report
 from quantanalyzer.report.render import to_html, to_markdown, to_pdf
+from quantanalyzer.watchlist import DEFAULT_WATCHLIST
 
 st.set_page_config(page_title="Quant Analyzer", page_icon="📊", layout="wide")
 
@@ -112,19 +113,11 @@ with st.sidebar:
     st.caption(f"v{__version__} · ti dice QUANDO e DOVE entrare")
 
     st.subheader("I miei mercati")
+    # Default = watchlist condivisa col monitor (unica fonte di verità).
+    _default_watch = "\n".join(f"{sym} {ac.value}" for sym, ac in DEFAULT_WATCHLIST)
     watch_text = st.text_area(
         "Uno per riga:  SIMBOLO  CLASSE",
-        value=(
-            "XAUUSD forex\n"
-            "EURUSD forex\n"
-            "GBPUSD forex\n"
-            "USDJPY forex\n"
-            "AUDUSD forex\n"
-            "SPY etf\n"
-            "QQQ etf\n"
-            "BTC/USDT crypto\n"
-            "ETH/USDT crypto"
-        ),
+        value=_default_watch,
         height=220,
         help="Es:  AAPL equity · BTC/USDT crypto · EURUSD forex · ^GSPC index",
     )

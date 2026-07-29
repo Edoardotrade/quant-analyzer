@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from quantanalyzer.alerts import monitor as mon
-from quantanalyzer.alerts.monitor import build_digest, evaluate_alerts, format_alert, run_once
+from quantanalyzer.alerts.monitor import (
+    _apply_staleness,
+    build_digest,
+    evaluate_alerts,
+    format_alert,
+    run_once,
+)
 from quantanalyzer.models import (
     AssetClass,
     Interval,
@@ -118,6 +126,18 @@ def test_same_symbol_two_timeframes_fire_independently():
     # secondo giro: nessun doppione
     assert evaluate_alerts(signals, state, notifier) == []
     assert len(sent) == 2
+
+
+def test_staleness_downgrades_enter_on_old_data():
+    now = datetime(2026, 7, 29, tzinfo=timezone.utc)
+    # dato fresco: ENTRA resta ENTRA
+    fresh = _enter().model_copy(update={"as_of": now - timedelta(hours=2)})
+    assert _apply_staleness(fresh, now).action == SignalAction.ENTER
+    # dato vecchio (feed fermo): ENTRA declassato ad ASPETTA, non pronto
+    stale = _enter().model_copy(update={"as_of": now - timedelta(days=10)})
+    out = _apply_staleness(stale, now)
+    assert out.action == SignalAction.WAIT
+    assert out.ready is False
 
 
 def test_run_once_persists_state_on_file(tmp_path, monkeypatch):

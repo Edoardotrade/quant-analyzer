@@ -1,0 +1,32 @@
+name: CI (test + lint)
+
+# Garanzia di qualità: ad ogni push/PR gira la suite di test e il linter.
+# Se qualcosa si rompe, lo si vede subito (verde/rosso) invece che in produzione.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa il pacchetto e gli strumenti di sviluppo
+        run: pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Test (pytest)
+        run: pytest -q

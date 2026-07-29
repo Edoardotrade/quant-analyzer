@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import Callable, Sequence
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from ..analysis.signal import build_operating_signal
@@ -44,6 +45,36 @@ def _state_key(sig: OperatingSignal) -> str:
     return f"{sig.symbol}@{sig.interval.value if sig.interval else '?'}"
 
 
+def _apply_staleness(
+    sig: OperatingSignal, now: datetime, *, max_age_days: float = 5.0
+) -> OperatingSignal:
+    """Sicurezza: non far entrare su dati palesemente stantii (feed rotto).
+
+    Se il segnale è ENTRA a mercato aperto ma l'ultima barra è più vecchia di
+    ``max_age_days`` (soglia larga, cattura solo feed davvero fermi senza falsi
+    positivi nei weekend), lo declassa ad ASPETTA. Meglio saltare un trade che
+    entrare a un prezzo vecchio.
+    """
+    if (
+        sig.action == SignalAction.ENTER
+        and sig.market_open
+        and sig.as_of is not None
+        and (now - sig.as_of) > timedelta(days=max_age_days)
+    ):
+        return sig.model_copy(
+            update={
+                "action": SignalAction.WAIT,
+                "ready": False,
+                "headline": f"⏳ ASPETTA {sig.symbol}: dati non aggiornati",
+                "reason": (
+                    f"Ultima barra del {sig.as_of:%Y-%m-%d %H:%M} troppo vecchia "
+                    "(feed fermo?): niente ingresso su prezzi stantii."
+                ),
+            }
+        )
+    return sig
+
+
 def check_watchlist(
     items: Sequence[tuple[str, AssetClass]],
     params: RiskParams,
@@ -51,9 +82,11 @@ def check_watchlist(
     interval: Interval = DEFAULT_INTERVAL,
     lookback: int = DEFAULT_LOOKBACK,
     service: MarketDataService | None = None,
+    now: datetime | None = None,
 ) -> list[OperatingSignal]:
     """Calcola il segnale operativo per ogni mercato della watchlist."""
     svc = service or MarketDataService()
+    now = now or datetime.now(timezone.utc)
     signals: list[OperatingSignal] = []
     for item in items:
         # accetta sia WatchItem (con timeframe/override) sia semplici (simbolo, classe)
@@ -66,7 +99,7 @@ def check_watchlist(
             it_interval, it_lookback, it_params = interval, lookback, params
         try:
             series = svc.get_prices(symbol, asset_class, it_interval, lookback=it_lookback)
-            signals.append(build_operating_signal(series, it_params))
+            signals.append(_apply_staleness(build_operating_signal(series, it_params), now))
         except Exception as exc:  # noqa: BLE001 — un asset rotto non ferma gli altri
             signals.append(
                 OperatingSignal(

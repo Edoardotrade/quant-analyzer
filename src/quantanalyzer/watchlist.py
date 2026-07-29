@@ -30,6 +30,7 @@ class WatchItem(NamedTuple):
     lookback: int = DEFAULT_LOOKBACK
     min_rr: float | None = None  # override del gate R:R minimo (se None usa il globale)
     atr_stop_mult: float | None = None  # override ampiezza stop (se None usa il globale)
+    risk_pct: float | None = None  # override rischio% (es. metà rischio su timeframe meno validati)
 
 
 # Watchlist operativa. ORO su DUE timeframe (più trade, ciascuno con edge validato
@@ -43,7 +44,7 @@ DEFAULT_WATCHLIST: list[WatchItem] = [
     ),
     WatchItem(
         "XAUUSD", AssetClass.FOREX, Interval.H4, H4_LOOKBACK,
-        min_rr=2.0, atr_stop_mult=1.5,
+        min_rr=2.0, atr_stop_mult=1.5, risk_pct=0.5,  # metà rischio: 4h meno validato
     ),
     WatchItem("USDJPY", AssetClass.FOREX),
     WatchItem("AUDUSD", AssetClass.FOREX),
@@ -61,6 +62,8 @@ def effective_params(item: WatchItem, base: RiskParams) -> RiskParams:
         updates["min_rr"] = item.min_rr
     if item.atr_stop_mult is not None:
         updates["atr_stop_mult"] = item.atr_stop_mult
+    if item.risk_pct is not None:
+        updates["risk_pct"] = item.risk_pct
     return base.model_copy(update=updates) if updates else base
 
 

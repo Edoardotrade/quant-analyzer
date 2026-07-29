@@ -61,3 +61,22 @@ def test_backtest_costs_reduce_return():
     # a parità di trade, i costi non possono migliorare il rendimento
     if base.n_trades > 0:
         assert with_costs.total_return_pct <= base.total_return_pct
+
+
+def test_signal_backtest_computes_and_is_consistent():
+    """Il backtest del segnale reale gira senza lookahead e con metriche coerenti."""
+    from quantanalyzer.backtest.engine import run_signal_backtest
+    from quantanalyzer.watchlist import DEFAULT_PARAMS
+
+    series = build_wave_series(n=400, amp=20, period=40)
+    r = run_signal_backtest(series, DEFAULT_PARAMS, signal_lookback=200, warmup=40)
+    assert r.computed is True
+    if r.n_trades:
+        assert r.wins + r.losses == r.n_trades
+        assert 0.0 <= r.win_rate <= 1.0
+        # ogni trade rispetta il lato dei livelli
+        for t in r.trades:
+            if t.side == PositionSide.LONG:
+                assert t.stop < t.entry < t.target
+            else:
+                assert t.target < t.entry < t.stop

@@ -5,7 +5,10 @@
 # reciprocamente compatibili. Le release 2026 (numpy 2.5 / pandas 3.0 / pyarrow 25)
 # risolte automaticamente da uv causavano un Segmentation fault all'avvio su
 # Streamlit Cloud (crash nativo, non un errore Python). Questo set è provato e stabile.
-.
+#
+# Editable (-e): il pacchetto punta al codice sorgente, così ogni modifica ai moduli
+# quantanalyzer è effettiva senza reinstallare (evita disallineamenti file/pacchetto).
+-e .
 streamlit>=1.30,<2
 numpy==1.26.4
 pandas==2.2.3

@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]        # ogni push su main avvia subito un controllo
   schedule:
-    # ogni 30 minuti: timeframe operativo giornaliero (scelto dopo backtest, batte
-    # l'1h). Cadenza ampiamente sufficiente e ben dentro i limiti Twelve Data.
-    - cron: "*/30 * * * *"
+    # Ogni ~15 min a minuti "strani" (NON :00/:30): i cron GitHub gratuiti sono
+    # best-effort e vengono scartati soprattutto negli orari congestionati (top
+    # dell'ora). Offset dispari + più tentativi = più esecuzioni vanno a buon fine.
+    # Repo pubblico => minuti illimitati, possiamo permettercelo.
+    - cron: "3,18,33,48 * * * *"
   workflow_dispatch: {}   # permette l'avvio manuale dalla scheda "Actions"
 
 # evita che due esecuzioni si accavallino

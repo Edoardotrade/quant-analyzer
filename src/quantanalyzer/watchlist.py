@@ -49,7 +49,17 @@ DEFAULT_WATCHLIST: list[WatchItem] = [
     WatchItem("USDJPY", AssetClass.FOREX),
     WatchItem("AUDUSD", AssetClass.FOREX),
     WatchItem("SPY", AssetClass.ETF),
+    # SPY/QQQ anche su 4h: edge positivo out-of-sample (2026-07-30), rischio dimezzato
+    # (edge sottile). USDJPY/AUDUSD/BTC/ETH su 4h NON abilitati (perdono OOS o dati insuff.).
+    WatchItem(
+        "SPY", AssetClass.ETF, Interval.H4, H4_LOOKBACK,
+        min_rr=2.0, atr_stop_mult=1.5, risk_pct=0.5,
+    ),
     WatchItem("QQQ", AssetClass.ETF),
+    WatchItem(
+        "QQQ", AssetClass.ETF, Interval.H4, H4_LOOKBACK,
+        min_rr=2.0, atr_stop_mult=1.5, risk_pct=0.5,
+    ),
     WatchItem("BTC/USDT", AssetClass.CRYPTO),
     WatchItem("ETH/USDT", AssetClass.CRYPTO),
 ]

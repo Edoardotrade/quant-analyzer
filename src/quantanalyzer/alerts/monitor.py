@@ -203,6 +203,40 @@ def _save_state(path: Path, state: dict[str, bool]) -> None:
     path.write_text(json.dumps(state), encoding="utf-8")
 
 
+def _load_ledger(path: Path) -> list[dict]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _save_ledger(path: Path, ledger: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(ledger), encoding="utf-8")
+
+
+def _update_paper_ledger(
+    signals: Sequence[OperatingSignal], svc: MarketDataService, ledger_path: Path
+) -> None:
+    """Aggiorna il registro paper-trading (registra nuovi ENTRA, chiude TP/SL colpiti).
+
+    Difensivo: qualunque errore qui NON deve fermare gli avvisi.
+    """
+    from .paper import record_new_signals, update_open_trades
+
+    ledger = _load_ledger(ledger_path)
+    record_new_signals(signals, ledger, datetime.now(timezone.utc))
+
+    def series_for(sym: str, interval: str, ac: str):
+        try:
+            return svc.get_prices(sym, AssetClass(ac), Interval(interval), lookback=400)
+        except Exception:  # noqa: BLE001 — dato mancante: il trade resta aperto
+            return None
+
+    update_open_trades(ledger, series_for)
+    _save_ledger(ledger_path, ledger)
+
+
 def run_once(
     items: Sequence[tuple[str, AssetClass]],
     params: RiskParams,
@@ -215,12 +249,18 @@ def run_once(
 
     Pensato anche per scheduler esterni (GitHub Actions/cron): lo stato su file
     (persistito dallo scheduler) evita di ri-notificare lo stesso setup.
+    Aggiorna anche il registro paper-trading (track record forward).
     """
     state_path = Path(state_path)
+    svc = service or MarketDataService()
     state = _load_state(state_path)
-    signals = check_watchlist(items, params, service=service)
+    signals = check_watchlist(items, params, service=svc)
     fired = evaluate_alerts(signals, state, notifier)
     _save_state(state_path, state)
+    try:
+        _update_paper_ledger(signals, svc, state_path.parent / "paper_ledger.json")
+    except Exception as exc:  # noqa: BLE001 — paper-trading non deve mai rompere gli avvisi
+        print(f"[paper] aggiornamento saltato (non fatale): {exc}", flush=True)
     return signals, fired
 
 

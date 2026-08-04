@@ -21,6 +21,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Leggi il registro paper-trading (sola lettura)
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache
+          key: quant-cache-none
+          restore-keys: |
+            quant-cache-
+
       - name: Installa il pacchetto
         run: pip install -e .
 

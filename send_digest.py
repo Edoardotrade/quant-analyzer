@@ -4,8 +4,10 @@ Legge le chiavi Telegram dalle variabili d'ambiente. Da usare una volta al giorn
 """
 
 import sys
+from pathlib import Path
 
 from quantanalyzer.alerts.monitor import build_digest, check_watchlist
+from quantanalyzer.alerts.paper import format_paper_report
 from quantanalyzer.alerts.telegram import send_telegram_message
 from quantanalyzer.config import get_settings
 from quantanalyzer.watchlist import DEFAULT_PARAMS, DEFAULT_WATCHLIST
@@ -20,5 +22,16 @@ if __name__ == "__main__":
         sys.exit(1)
 
     signals = check_watchlist(DEFAULT_WATCHLIST, DEFAULT_PARAMS)
-    send_telegram_message(build_digest(signals))
+    message = build_digest(signals)
+
+    # aggiunge il track record del paper-trading, se il registro esiste
+    try:
+        import json
+
+        ledger = json.loads(Path(".cache/paper_ledger.json").read_text(encoding="utf-8"))
+        message += "\n\n" + format_paper_report(ledger)
+    except Exception:  # noqa: BLE001 — registro assente: si invia comunque il riepilogo
+        pass
+
+    send_telegram_message(message)
     print("Riepilogo inviato.", flush=True)

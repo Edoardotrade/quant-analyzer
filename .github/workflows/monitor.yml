@@ -28,13 +28,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Ripristina lo stato degli avvisi (evita doppioni)
+      - name: Stato avvisi + registro paper-trading (persistiti tra i giri)
         uses: actions/cache@v4
         with:
-          path: .cache/monitor_state.json
-          key: monitor-state-${{ github.run_id }}
+          path: .cache
+          key: quant-cache-${{ github.run_id }}
           restore-keys: |
-            monitor-state-
+            quant-cache-
 
       - name: Installa il pacchetto
         run: pip install -e .
